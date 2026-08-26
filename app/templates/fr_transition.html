@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ transition.label }} · {{ fr.fr_key }}{% endblock %}
+
+{% block content %}
+<div class="narrow">
+  <nav class="crumb"><a href="/fr/{{ fr.fr_key }}">← {{ fr.fr_key }} {{ fr.title }}</a></nav>
+
+  <h1>{{ transition.label }}</h1>
+  <p class="transition-summary">
+    <span class="status-chip status-{{ fr.status.value }}">{{ fr.status.label }}</span>
+    <span aria-hidden="true">→</span>
+    <span class="status-chip status-{{ transition.target.value }}">{{ transition.target.label }}</span>
+  </p>
+
+  {% if transition.destructive %}
+    <p class="warn-box">
+      되돌리기 어려운 행동입니다.
+      {%- if transition.target == Status.CANCELED %} 취소된 요구사항은 다시 열 수 없습니다.{% endif %}
+    </p>
+  {% endif %}
+
+  {% if transition.note %}<p class="help">{{ transition.note }}</p>{% endif %}
+
+  {% for message in errors %}
+    <p class="error-box" role="alert">{{ message }}</p>
+  {% endfor %}
+
+  <form method="post" action="/fr/{{ fr.fr_key }}/transition/{{ transition.id }}">
+    {% for spec in transition.inputs %}
+      {% include "partials/input_field.html" %}
+    {% else %}
+      <p class="help">추가 입력 없이 진행합니다.</p>
+    {% endfor %}
+
+    <div class="form-actions">
+      <button type="submit" class="btn {{ 'btn-danger' if transition.destructive else 'btn-primary' }}">
+        {{ transition.label }}
+      </button>
+      <a class="btn btn-ghost" href="/fr/{{ fr.fr_key }}">취소하고 돌아가기</a>
+    </div>
+  </form>
+</div>
+{% endblock %}

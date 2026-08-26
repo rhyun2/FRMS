@@ -1,0 +1,38 @@
+{# 칸반 카드. PRD 7.2절이 정한 6가지만 표시한다. 그 외에는 넣지 않는다.
+
+   모든 상태 표시는 색 + 텍스트/기호 이중 인코딩이다 (FR-508). 색만으로 구분하지 않는다. #}
+<a class="card {{ 'card-overdue' if fr.is_overdue }}" href="/fr/{{ fr.fr_key }}">
+  <div class="card-top">
+    <span class="pri pri-{{ fr.priority.value if fr.priority else 'none' }}">
+      {% if fr.priority %}
+        {{ fr.priority.value }}{% if fr.priority.value == 'P0' %}<span aria-hidden="true">!</span>{% endif %}
+      {% else %}미정{% endif %}
+    </span>
+    <span class="card-key">{{ fr.fr_key }}</span>
+  </div>
+
+  <div class="card-title">{{ fr.title }}</div>
+
+  <div class="card-bottom">
+    {% if fr.current_owner %}
+      <span class="owner" title="{{ fr.current_owner.display_name }}">
+        <span class="avatar" aria-hidden="true">{{ fr.current_owner.initials }}</span>
+        {{ fr.current_owner.display_name }}
+      </span>
+    {% else %}
+      <span class="owner owner-none">담당 미지정</span>
+    {% endif %}
+
+    {% if fr.dday_label %}
+      <span class="dday {{ 'dday-late' if fr.is_overdue }}">
+        {% if fr.is_overdue %}<span aria-hidden="true">▲</span>{% endif %}{{ fr.dday_label }}
+      </span>
+    {% endif %}
+
+    {% if fr.rework_count %}
+      <span class="rework-badge" title="보완요청 {{ fr.rework_count }}회">
+        <span aria-hidden="true">↺</span>{{ fr.rework_count }}
+      </span>
+    {% endif %}
+  </div>
+</a>

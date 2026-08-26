@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}사용자 관리 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>사용자 · 역할 관리</h1>
+  <p class="help">
+    한 사용자가 여러 역할을 가질 수 있습니다. 비활성 사용자는 이력은 유지되지만
+    새 담당자로 지정할 수 없습니다.
+  </p>
+</div>
+
+<table class="table">
+  <thead><tr><th>사용자</th><th>역할</th><th>상태</th><th>최종 로그인</th></tr></thead>
+  <tbody>
+    {% for u in users %}
+    <tr class="{{ 'row-muted' if not u.is_active }}">
+      <td>
+        <strong>{{ u.display_name }}</strong><br>
+        <small>{{ u.email }}</small>
+      </td>
+      <td>
+        <form method="post" action="/admin/users/{{ u.id }}/roles" class="role-form">
+          {% for role in roles %}
+            <label><input type="checkbox" name="roles" value="{{ role.value }}"
+                          {{ 'checked' if u.has_role(role) }}> {{ role.label }}</label>
+          {% endfor %}
+          <button type="submit" class="btn btn-sm btn-primary">저장</button>
+        </form>
+      </td>
+      <td>
+        <form method="post" action="/admin/users/{{ u.id }}/active">
+          <input type="hidden" name="is_active" value="{{ 'false' if u.is_active else 'true' }}">
+          <button type="submit" class="btn btn-sm btn-ghost"
+                  {{ 'disabled' if u.id == user.id }}>
+            {{ '비활성화' if u.is_active else '활성화' }}
+          </button>
+        </form>
+        {% if not u.is_active %}<span class="muted">비활성</span>{% endif %}
+      </td>
+      <td><small>{{ u.last_login_at|localtime }}</small></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

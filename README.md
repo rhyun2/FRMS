@@ -12,10 +12,77 @@ IoT 플랫폼의 기능 요구사항 한 건이 **접수부터 완료까지 어�
 
 ## 현재 상태
 
-> **문서 단계 — 제품 요구사항 정의(PRD) 검토 중. 구현 코드는 아직 없다.**
+> **Phase 1 (MVP) 구현 완료.** 등록·전이·보완요청·칸반·내 할 일·역할 권한이 동작한다.
 
-[PRD 13절 오픈 이슈](./docs/PRD.md#13-오픈-이슈)의 결정 항목(특히 호스팅 위치, Entra ID
-앱 등록, 개발 리소스)이 확정되어야 Phase 1 개발에 착수한다.
+[Phase 1 종료 조건](./docs/roadmap.md#46-phase-1-종료-조건-exit-criteria)은 실사용
+데이터로 판정하므로, 4개 역할이 2주간 실제 업무로 사용해 봐야 Phase 2에 착수할 수 있다.
+운영 배포 전에는 [오픈 이슈](./docs/PRD.md#13-오픈-이슈) O1(호스팅 위치)과
+O3(Entra ID 앱 등록)이 확정되어야 한다.
+
+---
+
+## 실행
+
+```bash
+python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements-dev.txt
+
+python -m app.seed          # 데모 사용자 7명 + 요구사항 8건 생성
+uvicorn app.main:app --reload
+```
+
+http://localhost:8000 접속 → 개발용 로그인 화면에서 역할별 데모 계정을 골라 로그인한다.
+
+| 계정 | 역할 | 이 계정으로 볼 것 |
+|---|---|---|
+| 김사업 | 사업담당 | 요구사항 등록·제출, 내 요청 추적 |
+| 박개발 | 개발담당 | 요건검토 승인, 개발완료, 구현 보완요청 접수 |
+| 정유아이 | UI담당 | UI설계 완료 처리 |
+| 한검수 | 검수담당 | 검수 통과 / 보완요청(회귀 대상 지정) |
+| 운영자 | 관리자 | 사용자·역할 관리 |
+
+**같은 요구사항을 서로 다른 계정으로 열어 보면** 화면에 뜨는 행동 버튼이 달라지는 것을
+확인할 수 있다. 그것이 이 시스템의 핵심이다.
+
+### 설정
+
+`.env.example` 을 `.env` 로 복사해 수정한다. 기본값은 SQLite + 개발용 로컬 로그인이다.
+
+- `DATABASE_URL` 을 `postgresql+psycopg://...` 로 바꾸면 PostgreSQL로 전환된다.
+- `ENTRA_TENANT_ID` / `ENTRA_CLIENT_ID` / `ENTRA_CLIENT_SECRET` 을 채우면
+  **Entra ID SSO 모드로 전환되고 개발용 로컬 로그인은 닫힌다.**
+
+### 테스트
+
+```bash
+pytest
+```
+
+62건. 전이 매트릭스 전건 구조 검증, 필드 권한, HTTP 계층, 그리고
+[로드맵 4.5절](./docs/roadmap.md#45-테스트-전략)의 필수 E2E 시나리오 8종을 포함한다.
+그중 **E5~E8은 "거부되는 것이 정답"인 테스트**다.
+
+---
+
+## 코드 구조
+
+```
+app/
+  workflow.py     ★ 전이 매트릭스 — 이 제품의 심장
+  permissions.py    필드 그룹별 편집 권한
+  services.py       전이 실행·필드 수정 (모든 쓰기 경로가 여기를 지난다)
+  models.py         SQLAlchemy 모델
+  enums.py          상태·역할·우선순위·회귀 대상
+  notifications.py  앱 내 알림
+  routers/          HTTP 껍데기
+  templates/        Jinja2 화면
+  seed.py           데모 데이터
+tests/              62건
+```
+
+**`app/workflow.py` 의 `TRANSITIONS` 하나에서 네 가지가 파생된다**: 전이 권한 검증,
+필수 입력 검증, 화면의 버튼 노출, "내 할 일" 큐. 새 전이나 권한 변경은 이 테이블만
+고친다 — 규칙이 여러 곳에 흩어지면 반드시 어긋난다.
 
 ---
 
@@ -46,6 +113,7 @@ IoT 플랫폼의 기능 요구사항 한 건이 **접수부터 완료까지 어�
 |---|---|---|
 | 타겟 플랫폼 | **자체 웹 애플리케이션 단독** | [결정 기록](./docs/platform-decision.md) |
 | MS Teams 연동 | **MVP 범위 제외.** Phase 3 선택 과제(FR-804) | 두 플랫폼 동시 검증은 MVP를 흐린다 |
+| 구현 스택 | Python 3.11 · FastAPI · Jinja2 서버 렌더링 · SQLAlchemy · SQLite/PostgreSQL | [PRD 9절](./docs/PRD.md#9-기술-스택) |
 | 인증 | Microsoft Entra ID OIDC (자체 비밀번호 없음) | 사내 계정 그대로 사용 |
 | 개발 방식 | 최소 MVP 후 단계적 확장. **각 단계 종료 조건 충족 시에만 다음 단계 착수** | [로드맵 1절](./docs/roadmap.md#1-원칙) |
 | 상태 모델 | 12개 상태 / 22개 전이 | [데이터 모델 3~5절](./docs/data-model.md#3-상태-정의) |

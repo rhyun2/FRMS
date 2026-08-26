@@ -1,0 +1,50 @@
+{# 전이 폼의 입력 한 칸. workflow.Input 명세만으로 렌더링된다.
+
+   새 전이를 추가할 때 템플릿을 고칠 필요가 없다 — 매트릭스에 Input을 선언하면 끝난다. #}
+{% set value = values.get(spec.name, '') %}
+<div class="field">
+  <label for="f-{{ spec.name }}">
+    {{ spec.label }}{% if spec.required %}<span class="req" aria-label="필수">*</span>{% endif %}
+  </label>
+
+  {% if spec.kind == 'textarea' %}
+    <textarea id="f-{{ spec.name }}" name="{{ spec.name }}" rows="4"
+              {{ 'required' if spec.required }}>{{ value }}</textarea>
+
+  {% elif spec.kind == 'select_choice' %}
+    <select id="f-{{ spec.name }}" name="{{ spec.name }}" {{ 'required' if spec.required }}>
+      <option value="">선택하세요</option>
+      {% for code, label in spec.choices %}
+        <option value="{{ code }}" {{ 'selected' if value == code }}>{{ label }}</option>
+      {% endfor %}
+    </select>
+
+  {% elif spec.kind == 'select_user' %}
+    <select id="f-{{ spec.name }}" name="{{ spec.name }}" {{ 'required' if spec.required }}>
+      <option value="">선택하세요</option>
+      {% for candidate in users_by_role.get(spec.user_role, []) %}
+        <option value="{{ candidate.id }}" {{ 'selected' if value == candidate.id }}>
+          {{ candidate.display_name }}
+        </option>
+      {% endfor %}
+    </select>
+    {% if not users_by_role.get(spec.user_role) %}
+      <p class="field-warn">{{ spec.user_role.label }} 역할을 가진 활성 사용자가 없습니다.
+        관리자에게 역할 부여를 요청하세요.</p>
+    {% endif %}
+
+  {% elif spec.kind == 'date' %}
+    <input id="f-{{ spec.name }}" type="date" name="{{ spec.name }}" value="{{ value }}"
+           {{ 'required' if spec.required }}>
+
+  {% elif spec.kind == 'number' %}
+    <input id="f-{{ spec.name }}" type="number" step="0.5" min="0" name="{{ spec.name }}"
+           value="{{ value }}" {{ 'required' if spec.required }}>
+
+  {% else %}
+    <input id="f-{{ spec.name }}" type="text" name="{{ spec.name }}" value="{{ value }}"
+           {{ 'required' if spec.required }}>
+  {% endif %}
+
+  {% if spec.help_text %}<p class="help">{{ spec.help_text }}</p>{% endif %}
+</div>
