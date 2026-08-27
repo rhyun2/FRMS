@@ -23,8 +23,14 @@ O3(Entra ID 앱 등록)이 확정되어야 한다.
 
 ## 실행
 
+> **Python 3.11 이상이 필요합니다.** macOS 시스템 기본 Python은 3.9이므로 그대로
+> venv를 만들면 실행되지 않습니다 ([트러블슈팅](#트러블슈팅) 참조).
+
 ```bash
-python -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
+python3 --version           # 3.11 이상인지 먼저 확인
+# 낮다면: brew install python@3.12   (또는 pyenv install 3.12)
+
+python3.12 -m venv .venv && source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements-dev.txt
 
 python -m app.seed          # 데모 사용자 7명 + 요구사항 8건 생성
@@ -51,6 +57,28 @@ http://localhost:8000 접속 → 개발용 로그인 화면에서 역할별 데�
 - `DATABASE_URL` 을 `postgresql+psycopg://...` 로 바꾸면 PostgreSQL로 전환된다.
 - `ENTRA_TENANT_ID` / `ENTRA_CLIENT_ID` / `ENTRA_CLIENT_SECRET` 을 채우면
   **Entra ID SSO 모드로 전환되고 개발용 로컬 로그인은 닫힌다.**
+
+### 트러블슈팅
+
+**`TypeError: unsupported operand type(s) for |: 'type' and 'NoneType'`**
+또는 `Unable to evaluate type annotation 'str | None'`
+
+venv가 Python 3.10 이하로 만들어진 경우입니다. 이 코드는 `X | None` 유니온(3.10+)과
+`StrEnum`(3.11+)을 쓰므로 3.11 이상이 필요합니다.
+
+```bash
+rm -rf .venv                       # 낮은 버전으로 만든 venv 폐기
+python3.12 -m venv .venv
+source .venv/bin/activate
+python --version                   # 3.12.x 확인
+pip install -r requirements-dev.txt
+```
+
+> Pydantic이 안내하는 **`eval_type_backport` 설치로는 해결되지 않습니다.** 그 오류만
+> 넘어갈 뿐, 바로 다음 임포트인 `StrEnum`에서 `ImportError`가 납니다.
+
+3.11 미만에서 실행하면 `app/__init__.py`의 버전 가드가 위 안내를 담은 메시지와 함께
+즉시 중단시킵니다.
 
 ### 테스트
 

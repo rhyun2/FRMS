@@ -1,3 +1,4 @@
+# Python 3.11 이상 필요 (app/enums.py의 StrEnum이 하한을 결정)
 fastapi>=0.115
 uvicorn[standard]>=0.30
 sqlalchemy>=2.0
