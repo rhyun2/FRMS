@@ -122,6 +122,7 @@ tests/              62건
 | [docs/data-model.md](./docs/data-model.md) | 데이터 모델과 워크플로 정의. 엔티티·필드 사전, **상태 전이 매트릭스(22건)**, 역할×권한 매트릭스 |
 | [docs/platform-decision.md](./docs/platform-decision.md) | 플랫폼 결정 기록. MS Teams vs 자체 웹앱 비교 평가와 **웹앱 단독 채택 근거**, 재검토 조건 |
 | [docs/roadmap.md](./docs/roadmap.md) | 단계별 개발 로드맵. Phase 1~3 범위, **각 단계의 종료 조건(Exit Criteria)**, 테스트 전략 |
+| [deploy/README.md](./deploy/README.md) | AWS EC2 배포 가이드. 인스턴스 생성부터 systemd·nginx·백업까지 |
 
 ### 읽는 순서
 
@@ -132,6 +133,7 @@ tests/              62건
 4. **구현을 맡았다면** — [데이터 모델](./docs/data-model.md)의 상태 전이 매트릭스부터.
    이 표가 제품의 심장이며, 권한 검증·필수 입력 검증·화면 버튼 노출·내 할 일 큐가
    모두 여기서 파생된다.
+5. **서버에 올려야 한다면** — [배포 가이드](./deploy/README.md)
 
 ---
 
