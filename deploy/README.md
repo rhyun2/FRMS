@@ -54,21 +54,31 @@ ssh -i frms-key.pem ubuntu@<탄력적_IP>
 
 ```bash
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y git nginx build-essential
+sudo apt install -y git nginx build-essential software-properties-common
 
 sudo ufw allow OpenSSH
 sudo ufw allow 'Nginx Full'
 sudo ufw enable
-
-python3 --version   # 3.11 이상 확인 (StrEnum을 쓰므로 필수 — README.md 참조)
 ```
 
-Ubuntu 24.04는 기본 Python 3.12라 별도 설치가 필요 없다. 22.04 이하라면:
+### Python 3.12 확인 및 설치
+
+FRMS는 `python3.12` 실행 파일로 가상환경을 만든다(4절). AMI가 실제로 어떤 버전인지
+가정하지 않고 **없으면 설치**하는 방식으로 확인한다 — "Ubuntu 24.04라 필요 없다"는
+가정은 콘솔에서 다른 이미지를 고르는 순간 깨지고, 그때 4절에서 원인을 알아보기 어려운
+`python3.12: command not found` → `pip: command not found` 연쇄 오류로 나타난다.
 
 ```bash
-sudo add-apt-repository -y ppa:deadsnakes/ppa
-sudo apt install -y python3.12 python3.12-venv python3.12-dev
+if ! command -v python3.12 >/dev/null 2>&1; then
+    sudo add-apt-repository -y ppa:deadsnakes/ppa
+    sudo apt update
+    sudo apt install -y python3.12 python3.12-venv python3.12-dev
+fi
+
+python3.12 --version   # 3.12.x 가 출력되어야 4절로 진행한다
 ```
+
+이 명령이 버전을 출력하지 않으면 4절을 실행하지 않는다.
 
 ## 4. 애플리케이션 배포
 
@@ -79,9 +89,27 @@ sudo useradd --system --create-home --shell /bin/bash frms
 sudo mkdir -p /opt/frms && sudo chown frms:frms /opt/frms
 
 sudo -u frms -H bash -c '
+  set -euo pipefail
+
+  # PR #1이 머지되기 전까지는 main 에 앱 코드가 없다(빈 초기 커밋뿐).
+  # 머지 후에는 이 한 줄만 main 으로 바꾼다.
+  BRANCH="claude/iot-feature-request-prd-zarubq"
+
   cd /opt/frms
-  git clone https://github.com/rhyun2/FRMS.git .
-  git checkout main
+
+  # 재실행에도 안전하도록: 이미 클론돼 있으면 clone 대신 fetch 한다.
+  if [ -d .git ]; then
+    git fetch origin
+  else
+    git clone https://github.com/rhyun2/FRMS.git .
+  fi
+  git checkout "$BRANCH"
+  git pull origin "$BRANCH"
+
+  command -v python3.12 >/dev/null 2>&1 || {
+    echo "python3.12가 없습니다. 3절의 Python 설치 단계를 먼저 실행하세요." >&2
+    exit 1
+  }
 
   python3.12 -m venv .venv
   source .venv/bin/activate
@@ -89,9 +117,14 @@ sudo -u frms -H bash -c '
   pip install -r requirements.txt
   pip install gunicorn
 
-  cp .env.example .env
+  [ -f .env ] || cp .env.example .env
 '
 ```
+
+`set -euo pipefail`이 없으면 앞 단계가 실패해도 스크립트가 계속 진행되며 이후 명령이
+줄줄이 실패해, 정작 원인(첫 실패)이 아니라 그 여파만 잔뜩 보게 된다. `python3.12`가
+없어서 venv 생성이 실패했을 때 `pip: command not found`가 세 줄 더 쏟아지는 것이
+그 예다 — 진짜 원인은 하나뿐이었다.
 
 ### `.env` 설정
 
@@ -120,6 +153,7 @@ openssl rand -hex 32   # SESSION_SECRET 값 생성
 
 ```bash
 sudo -u frms -H bash -c '
+  set -euo pipefail
   cd /opt/frms && source .venv/bin/activate
   python -m app.seed
 '
@@ -194,8 +228,12 @@ sudo systemctl restart frms
 
 ```bash
 sudo -u frms -H bash -c '
+  set -euo pipefail
+  BRANCH="claude/iot-feature-request-prd-zarubq"   # PR #1 머지 후 main 으로
   cd /opt/frms
-  git pull
+  git fetch origin
+  git checkout "$BRANCH"
+  git pull origin "$BRANCH"
   source .venv/bin/activate
   pip install -r requirements.txt
 '
