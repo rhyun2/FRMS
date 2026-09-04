@@ -1,0 +1,13 @@
+# FRMS SQLite 백업 크론 (SQLite로 운영할 때만 필요. RDS 사용 시 불필요)
+#
+# 설치:
+#   sudo cp deploy/backup-to-s3.cron /etc/cron.d/frms-backup
+#   sudo chmod 644 /etc/cron.d/frms-backup
+#
+# 사전 준비:
+#   - S3 버킷 생성
+#   - frms 사용자가 s3:PutObject 권한을 갖도록 IAM 역할을 인스턴스에 부여
+#     (또는 `sudo -u frms aws configure`로 자격 증명 설정)
+#   - <버킷명> 을 실제 버킷 이름으로 치환
+
+0 3 * * * frms aws s3 cp /opt/frms/frms.db s3://<버킷명>/frms-backups/frms-$(date +\%F).db

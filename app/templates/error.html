@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}오류 {{ status_code }} · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="narrow error-page">
+  <h1>{{ status_code }}</h1>
+  <p class="error-box">{{ detail }}</p>
+  <p><a class="btn btn-ghost" href="/board">보드로 돌아가기</a></p>
+</div>
+{% endblock %}
