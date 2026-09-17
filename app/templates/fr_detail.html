@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}{{ fr.fr_key }} · {{ fr.title }}{% endblock %}
+
+{% block content %}
+<article class="detail">
+
+  <header class="detail-head">
+    <div>
+      <span class="card-key">{{ fr.fr_key }}</span>
+      <span class="pri pri-{{ fr.priority.value if fr.priority else 'none' }}">
+        {{ fr.priority.value if fr.priority else '우선순위 미정' }}
+      </span>
+      <span class="status-chip status-{{ fr.status.value }}">{{ fr.status.label }}</span>
+      {% if fr.is_overdue %}
+        <span class="dday dday-late"><span aria-hidden="true">▲</span>{{ fr.dday_label }} 지연</span>
+      {% elif fr.dday_label %}
+        <span class="dday">{{ fr.dday_label }}</span>
+      {% endif %}
+      {% if fr.rework_count %}
+        <span class="rework-badge"><span aria-hidden="true">↺</span>보완요청 {{ fr.rework_count }}회</span>
+      {% endif %}
+    </div>
+    <h1>{{ fr.title }}</h1>
+  </header>
+
+  {# --- 진행 스테퍼 (FR-502) --- #}
+  <ol class="stepper" aria-label="진행 단계">
+    {% for step in STEPPER_STEPS %}
+      {% set state = stepper_state(fr, step) %}
+      <li class="step step-{{ state }}">
+        <span class="step-mark" aria-hidden="true">
+          {%- if state == 'done' %}✓{% elif state == 'skipped' %}–{% else %}●{% endif -%}
+        </span>
+        <span class="step-label">{{ step.label }}</span>
+        {% if state == 'current' %}<span class="sr-only">(현재 단계)</span>{% endif %}
+        {% if state == 'skipped' %}<small>생략됨</small>{% endif %}
+      </li>
+    {% endfor %}
+  </ol>
+
+  {% if fr.status in (Status.DRAFT, Status.ON_HOLD, Status.REWORK, Status.REJECTED, Status.CANCELED) %}
+    <p class="stepper-note">
+      현재 상태는 <strong>{{ fr.status.label }}</strong>입니다.
+      {%- if fr.status == Status.REWORK and fr.open_rework %}
+        회귀 대상은 <strong>{{ fr.open_rework.regression_target.label }}</strong>이며,
+        {{ fr.open_rework.regression_target.return_status.label }} 단계로 되돌아갑니다.
+      {%- endif %}
+    </p>
+  {% endif %}
+
+  {# --- 수행 가능한 전이만 노출 (FR-208) --- #}
+  <div class="actions">
+    {% for t in transitions %}
+      <a class="btn {{ 'btn-danger' if t.destructive else 'btn-primary' }}"
+         href="/fr/{{ fr.fr_key }}/transition/{{ t.id }}">{{ t.label }}</a>
+    {% else %}
+      <p class="no-actions">지금 이 요구사항에서 수행할 수 있는 행동이 없습니다.</p>
+    {% endfor %}
+    {% if editable %}
+      <a class="btn btn-ghost" href="/fr/{{ fr.fr_key }}/edit">수정</a>
+    {% endif %}
+  </div>
+
+  <div class="detail-grid">
+    <section class="panel">
+      <h2>요청 정보</h2>
+      <dl>
+        <dt>배경·목적</dt><dd>{{ fr.background or '-' }}</dd>
+        <dt>상세 내용</dt><dd class="pre">{{ fr.description }}</dd>
+        <dt>완료 조건</dt>
+        <dd class="pre {{ 'warn' if not fr.acceptance_criteria }}">
+          {{ fr.acceptance_criteria or '미입력 — 제출 전에 반드시 채워야 합니다' }}
+        </dd>
+        <dt>대상 제품</dt><dd>{{ fr.product }}</dd>
+        <dt>기능 구분</dt><dd>{{ fr.category.label }}</dd>
+        <dt>희망 완료일</dt><dd>{{ fr.desired_due_date|localdate }}</dd>
+      </dl>
+    </section>
+
+    <section class="panel">
+      <h2>담당 · 계획</h2>
+      <dl>
+        <dt>요청자</dt><dd>{{ fr.requester.display_name }}</dd>
+        <dt>개발담당</dt><dd>{{ fr.dev_owner.display_name if fr.dev_owner else '미지정' }}</dd>
+        <dt>UI담당</dt><dd>{{ fr.ui_owner.display_name if fr.ui_owner else '미지정' }}</dd>
+        <dt>검수담당</dt><dd>{{ fr.qa_owner.display_name if fr.qa_owner else '미지정' }}</dd>
+        <dt>UI 변경</dt><dd>{{ '필요' if fr.ui_change_required else '없음 (UI설계 생략)' }}</dd>
+        <dt>예상 공수</dt><dd>{{ fr.estimate_md ~ ' MD' if fr.estimate_md else '-' }}</dd>
+        <dt>목표 완료일</dt><dd>{{ fr.target_due_date|localdate }}</dd>
+        {% if fr.ui_design_url %}
+          <dt>설계 산출물</dt>
+          <dd><a href="{{ fr.ui_design_url }}" rel="noopener noreferrer" target="_blank">링크 열기</a></dd>
+        {% endif %}
+        {% if fr.dev_result_summary %}
+          <dt>개발결과</dt><dd class="pre">{{ fr.dev_result_summary }}</dd>
+          <dt>검증 환경</dt><dd>{{ fr.test_env or '-' }}</dd>
+        {% endif %}
+        {% if fr.test_result_summary %}
+          <dt>검수 결과</dt><dd class="pre">{{ fr.test_result_summary }}</dd>
+        {% endif %}
+        {% if fr.closed_reason %}
+          <dt>종결 사유</dt><dd class="pre">{{ fr.closed_reason }}</dd>
+        {% endif %}
+      </dl>
+    </section>
+  </div>
+
+  {% if fr.reworks %}
+  <section class="panel">
+    <h2>보완요청 이력 <span class="count">{{ fr.reworks|length }}</span></h2>
+    <table class="table">
+      <thead>
+        <tr><th>회차</th><th>회귀 대상</th><th>심각도</th><th>제기</th>
+            <th>내용</th><th>접수</th></tr>
+      </thead>
+      <tbody>
+        {% for rw in fr.reworks %}
+        <tr class="{{ 'row-open' if not rw.accepted_at }}">
+          <td>{{ rw.sequence_no }}</td>
+          <td><span class="regr regr-{{ rw.regression_target.value }}">{{ rw.regression_target.label }}</span></td>
+          <td>{{ rw.severity.label }}</td>
+          <td>{{ rw.raised_by.display_name }}<br><small>{{ rw.raised_at|localtime }}</small></td>
+          <td class="pre">{{ rw.reason }}{% if rw.discovery_context %}
+            <br><small>발견 경위: {{ rw.discovery_context }}</small>{% endif %}</td>
+          <td>
+            {% if rw.accepted_at %}
+              {{ rw.accepted_by.display_name }}<br><small>{{ rw.accepted_at|localtime }}</small>
+            {% else %}<em>접수 대기</em>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  <section class="panel">
+    <h2>진행 이력</h2>
+    <table class="table">
+      <thead><tr><th>일시</th><th>행동</th><th>단계</th><th>수행자</th><th>사유·메모</th></tr></thead>
+      <tbody>
+        {% for tr in fr.transitions|reverse %}
+        <tr>
+          <td><small>{{ tr.created_at|localtime }}</small></td>
+          <td>{{ tr.action_code }} <small>({{ tr.transition_id }})</small></td>
+          <td>
+            {%- if tr.from_status %}{{ Status(tr.from_status).label }} → {% endif -%}
+            {{ Status(tr.to_status).label }}
+          </td>
+          <td>{{ tr.actor.display_name }} <small>{{ Role(tr.actor_role).label }}</small></td>
+          <td class="pre">{{ tr.comment or '-' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+
+  {% if fr.field_changes %}
+  <section class="panel">
+    <h2>변경 이력 <span class="count">{{ fr.field_changes|length }}</span></h2>
+    <table class="table">
+      <thead><tr><th>일시</th><th>항목</th><th>이전</th><th>변경</th><th>수행자</th></tr></thead>
+      <tbody>
+        {% for ch in fr.field_changes|reverse %}
+        <tr>
+          <td><small>{{ ch.created_at|localtime }}</small></td>
+          <td>{{ FIELD_LABELS.get(ch.field_name, ch.field_name) }}</td>
+          <td class="pre muted">{{ ch.old_value or '-' }}</td>
+          <td class="pre">{{ ch.new_value or '-' }}</td>
+          <td>{{ ch.actor.display_name }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+</article>
+{% endblock %}

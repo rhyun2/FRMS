@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}알림 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="narrow">
+  <h1>알림</h1>
+  <p class="help">
+    Phase 1은 앱 내 알림만 제공합니다. 이메일 알림은 Phase 2(FR-605),
+    Teams 알림은 Phase 3(FR-804) 범위입니다.
+  </p>
+
+  {% if items %}
+  <ul class="notif-list">
+    {% for n in items %}
+    <li class="{{ 'unread' if not n.read_at }}">
+      <a href="/fr/{{ n.feature_request.fr_key }}">{{ n.message }}</a>
+      <small>{{ n.created_at|localtime }}</small>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="empty-state">알림이 없습니다.</p>
+  {% endif %}
+</div>
+{% endblock %}

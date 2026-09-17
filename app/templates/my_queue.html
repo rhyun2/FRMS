@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}내 할 일 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>내 할 일</h1>
+  <p class="help">
+    역할이 아니라 <strong>지금 실제로 수행할 수 있는 행동이 있는 건</strong>만 표시됩니다.
+    지연 → 우선순위 → 목표 완료일 순으로 정렬됩니다.
+  </p>
+</div>
+
+{% if rows %}
+<table class="table table-queue">
+  <thead>
+    <tr><th>요구사항</th><th>단계</th><th>우선순위</th><th>기한</th><th>할 수 있는 행동</th></tr>
+  </thead>
+  <tbody>
+    {% for row in rows %}
+    <tr class="{{ 'row-late' if row.fr.is_overdue }}">
+      <td>
+        <a href="/fr/{{ row.fr.fr_key }}"><strong>{{ row.fr.fr_key }}</strong> {{ row.fr.title }}</a>
+        {% if row.fr.rework_count %}
+          <span class="rework-badge"><span aria-hidden="true">↺</span>{{ row.fr.rework_count }}</span>
+        {% endif %}
+      </td>
+      <td><span class="status-chip status-{{ row.fr.status.value }}">{{ row.fr.status.label }}</span></td>
+      <td><span class="pri pri-{{ row.fr.priority.value if row.fr.priority else 'none' }}">
+        {{ row.fr.priority.value if row.fr.priority else '미정' }}</span></td>
+      <td>
+        {% if row.fr.dday_label %}
+          <span class="dday {{ 'dday-late' if row.fr.is_overdue }}">
+            {% if row.fr.is_overdue %}<span aria-hidden="true">▲</span>{% endif %}{{ row.fr.dday_label }}
+          </span>
+        {% else %}-{% endif %}
+      </td>
+      <td class="queue-actions">
+        {% for t in row.transitions %}
+          <a class="btn btn-sm {{ 'btn-danger' if t.destructive else 'btn-primary' }}"
+             href="/fr/{{ row.fr.fr_key }}/transition/{{ t.id }}">{{ t.label }}</a>
+        {% endfor %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="empty-state">지금 처리할 항목이 없습니다.</p>
+{% endif %}
+{% endblock %}

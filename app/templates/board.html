@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}보드 · {{ app_name }}{% endblock %}
+{% block main_class %}page board-page{% endblock %}
+
+{% block content %}
+<div class="page-head">
+  <h1>진행 현황</h1>
+  <form class="filters" method="get" action="/board">
+    <label><input type="checkbox" name="mine" value="true" {{ 'checked' if mine }}
+                  onchange="this.form.submit()"> 내가 관련된 건만</label>
+    <label><input type="checkbox" name="show_closed" value="true" {{ 'checked' if show_closed }}
+                  onchange="this.form.submit()"> 보류·반려·취소 표시</label>
+    <noscript><button type="submit">적용</button></noscript>
+  </form>
+</div>
+
+{% if my_drafts %}
+<section class="drafts">
+  <h2>내 작성중 <span class="count">{{ my_drafts|length }}</span></h2>
+  <div class="draft-row">
+    {% for fr in my_drafts %}{% include "partials/card.html" %}{% endfor %}
+  </div>
+</section>
+{% endif %}
+
+<div class="board" role="list">
+  {% for col in columns %}
+  <section class="col {{ 'col-rework' if col.status == Status.REWORK }}" role="listitem">
+    <header class="col-head">
+      <h2>{{ col.status.label }}</h2>
+      <span class="count">{{ col.count }}</span>
+      {% if col.overdue %}
+        <span class="count-late" title="지연 {{ col.overdue }}건">
+          <span aria-hidden="true">▲</span>{{ col.overdue }}
+        </span>
+      {% endif %}
+    </header>
+    <div class="col-body">
+      {% for fr in col.cards %}{% include "partials/card.html" %}{% else %}
+        <p class="empty">없음</p>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+
+{% if show_closed %}
+<div class="board board-closed">
+  {% for col in closed %}
+  <section class="col col-muted">
+    <header class="col-head">
+      <h2>{{ col.status.label }}</h2><span class="count">{{ col.count }}</span>
+    </header>
+    <div class="col-body">
+      {% for fr in col.cards %}{% include "partials/card.html" %}{% else %}
+        <p class="empty">없음</p>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+{% endif %}
+
+<p class="hint">
+  카드는 드래그로 옮길 수 없습니다. 단계 전이는 필수 입력 검증이 필요하므로
+  상세 화면의 전이 버튼으로만 수행됩니다.
+</p>
+{% endblock %}

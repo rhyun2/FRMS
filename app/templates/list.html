@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}목록 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="page-head"><h1>요구사항 목록 <span class="count">{{ items|length }}</span></h1></div>
+
+{# 필터는 GET 쿼리스트링이므로 이 화면의 링크를 그대로 공유·북마크할 수 있다 (FR-509) #}
+<form class="filters filters-block" method="get" action="/list">
+  <fieldset>
+    <legend>단계</legend>
+    {% for s in Status %}
+      <label><input type="checkbox" name="status" value="{{ s.value }}"
+                    {{ 'checked' if s.value in selected_statuses }}> {{ s.label }}</label>
+    {% endfor %}
+    <p class="help">아무것도 선택하지 않으면 종결되지 않은 전 건을 표시합니다.</p>
+  </fieldset>
+
+  <fieldset>
+    <legend>우선순위</legend>
+    {% for p in Priority %}
+      <label><input type="checkbox" name="priority" value="{{ p.value }}"
+                    {{ 'checked' if p.value in selected_priorities }}> {{ p.value }} {{ p.label }}</label>
+    {% endfor %}
+  </fieldset>
+
+  <fieldset>
+    <legend>기타</legend>
+    <label>담당자
+      <select name="owner">
+        <option value="">전체</option>
+        {% for u in all_users %}
+          <option value="{{ u.id }}" {{ 'selected' if owner == u.id }}>{{ u.display_name }}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <label>대상 제품 <input type="text" name="product" value="{{ product }}" placeholder="부분 일치"></label>
+    <label><input type="checkbox" name="overdue_only" value="true" {{ 'checked' if overdue_only }}> 지연 건만</label>
+  </fieldset>
+
+  <div class="form-actions">
+    <button type="submit" class="btn btn-primary">적용</button>
+    <a class="btn btn-ghost" href="/list">초기화</a>
+  </div>
+</form>
+
+<table class="table">
+  <thead>
+    <tr><th>키</th><th>제목</th><th>단계</th><th>우선순위</th><th>현재 담당</th>
+        <th>목표일</th><th>보완</th><th>제품</th></tr>
+  </thead>
+  <tbody>
+    {% for fr in items %}
+    <tr class="{{ 'row-late' if fr.is_overdue }}">
+      <td><a href="/fr/{{ fr.fr_key }}">{{ fr.fr_key }}</a></td>
+      <td>{{ fr.title }}</td>
+      <td><span class="status-chip status-{{ fr.status.value }}">{{ fr.status.label }}</span></td>
+      <td><span class="pri pri-{{ fr.priority.value if fr.priority else 'none' }}">
+        {{ fr.priority.value if fr.priority else '미정' }}</span></td>
+      <td>{{ fr.current_owner.display_name if fr.current_owner else '-' }}</td>
+      <td>
+        {{ fr.target_due_date|localdate }}
+        {% if fr.is_overdue %}<span class="dday dday-late"><span aria-hidden="true">▲</span>{{ fr.dday_label }}</span>{% endif %}
+      </td>
+      <td>{% if fr.rework_count %}<span class="rework-badge"><span aria-hidden="true">↺</span>{{ fr.rework_count }}</span>{% else %}-{% endif %}</td>
+      <td>{{ fr.product }}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="8" class="empty">조건에 맞는 요구사항이 없습니다.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

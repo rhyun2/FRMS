@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}로그인 · {{ app_name }}{% endblock %}
+
+{% block content %}
+<div class="login">
+  <h1>{{ app_name }}</h1>
+  <p class="sub">IoT 플랫폼 기능요구사항 관리 시스템</p>
+
+  {% if sso_enabled %}
+    <a class="btn btn-primary btn-lg" href="/auth/login">Microsoft 계정으로 로그인</a>
+  {% else %}
+    <div class="dev-notice">
+      <strong>개발 모드</strong>
+      <p>Entra ID 설정이 없어 로컬 로그인으로 동작합니다.
+         운영 환경에서는 <code>ENTRA_TENANT_ID</code>, <code>ENTRA_CLIENT_ID</code>,
+         <code>ENTRA_CLIENT_SECRET</code>을 설정하면 이 화면이 SSO로 바뀝니다.</p>
+    </div>
+
+    {% if dev_users %}
+    <form method="post" action="/auth/dev-login" class="dev-login">
+      <label for="f-user">사용자 선택</label>
+      <select id="f-user" name="user_id" required>
+        {% for u in dev_users %}
+          <option value="{{ u.id }}">{{ u.display_name }} — {{ u.role_labels }}</option>
+        {% endfor %}
+      </select>
+      <button type="submit" class="btn btn-primary">로그인</button>
+    </form>
+    {% else %}
+      <p class="warn-box">
+        사용자가 없습니다. <code>python -m app.seed</code> 로 데모 데이터를 넣으세요.
+      </p>
+    {% endif %}
+  {% endif %}
+</div>
+{% endblock %}

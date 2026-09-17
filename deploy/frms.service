@@ -1,0 +1,26 @@
+[Unit]
+Description=FRMS (Feature Request Management System)
+After=network.target
+
+[Service]
+Type=simple
+User=frms
+Group=frms
+WorkingDirectory=/opt/frms
+ExecStart=/opt/frms/.venv/bin/gunicorn app.main:app \
+    -k uvicorn.workers.UvicornWorker \
+    --workers 2 \
+    --bind 127.0.0.1:8000 \
+    --access-logfile - \
+    --error-logfile -
+Restart=on-failure
+RestartSec=5
+
+# 최소 권한 원칙 — 이 유닛이 /opt/frms 밖을 건드릴 이유가 없다.
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/frms
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
